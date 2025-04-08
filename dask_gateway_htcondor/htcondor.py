@@ -16,7 +16,7 @@ def htcondor_create_execution_script(execution_script, setup_command, execution_
             setup_command,
             execution_command
         ]))
-        os.chmod(execution_script,  0o755) # o
+        os.chmod(execution_script,  0o755)
 
 def htcondor_create_jdl(cluster_config, execution_script, log_dir, cpus, mem, env, tls_path):
     # ensure log dir is present otherwise condor_submit will fail
