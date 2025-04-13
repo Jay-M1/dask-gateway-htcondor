@@ -4,7 +4,7 @@ from dask_gateway_server.traitlets import Type
 from traitlets import Dict, Unicode, default
 
 from enum import Enum
-import math, os, pwd, re, shutil
+import math, os, pwd, re, shutil, grp
 
 def htcondor_create_execution_script(execution_script, setup_command, execution_command):
     # write script to staging_dir
@@ -16,7 +16,12 @@ def htcondor_create_execution_script(execution_script, setup_command, execution_
             setup_command,
             execution_command
         ]))
+        # make it executable
         os.chmod(execution_script, 0o755)
+        # Change ownership
+        uid = pwd.getpwnam("jovyan").pw_uid
+        gid = grp.getgrnam("jovyan").gr_gid
+        os.chown(execution_script, uid, gid)
 
 def htcondor_create_jdl(cluster_config, execution_script, log_dir, cpus, mem, env, tls_path):
     # logs
