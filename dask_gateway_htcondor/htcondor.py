@@ -19,6 +19,11 @@ def htcondor_create_execution_script(execution_script, setup_command, execution_
         os.chmod(execution_script,  0o755)
 
 def htcondor_create_jdl(cluster_config, execution_script, log_dir, cpus, mem, env, tls_path):
+    # logs
+    print(">>>> execution_script =", execution_script)
+    print(">>>> abs execution_script =", os.path.abspath(execution_script))
+    print(">>>> initialdir =", os.path.dirname(execution_script))
+
     # ensure log dir is present otherwise condor_submit will fail
     os.makedirs(log_dir, exist_ok=True)
 
