@@ -130,7 +130,7 @@ class HTCondorBackend(JobQueueBackend):
         htcondor_staging_dir = self._get_htcondor_staging_dir(cluster)
 
         # ensure that staging_dir exists
-    
+        uid = pwd.getpwnam("jovyan").pw_uid
         os.setuid(uid)
         os.makedirs(htcondor_staging_dir, exist_ok=True)
         os.setuid(0)
