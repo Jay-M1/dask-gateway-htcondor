@@ -19,8 +19,8 @@ def htcondor_create_execution_script(execution_script, setup_command, execution_
         # make it executable
         #os.chmod(execution_script, 0o755)
         # Change ownership
-        uid = pwd.getpwnam("jovyan").pw_uid
-        gid = grp.getgrnam("jovyan").gr_gid
+        #uid = pwd.getpwnam("jovyan").pw_uid
+        #gid = grp.getgrnam("jovyan").gr_gid
         #os.chown(execution_script, uid, gid)
 
 def htcondor_create_jdl(cluster_config, execution_script, log_dir, cpus, mem, env, tls_path):
@@ -30,10 +30,11 @@ def htcondor_create_jdl(cluster_config, execution_script, log_dir, cpus, mem, en
     print(">>>> initialdir =", os.path.dirname(execution_script))
 
     # ensure log dir is present otherwise condor_submit will fail
+    root_uid = os.getuid()
     uid = pwd.getpwnam("jovyan").pw_uid
     os.setuid(uid)
     os.makedirs(log_dir, exist_ok=True)
-    #os.setuid(0)
+    os.setuid(root_uid)
 
     env["DASK_DISTRIBUTED__COMM__TLS__SCHEDULER__CERT"] = "dask.crt"
     env["DASK_DISTRIBUTED__COMM__TLS__WORKER__CERT"] = "dask.crt"
@@ -130,10 +131,11 @@ class HTCondorBackend(JobQueueBackend):
         htcondor_staging_dir = self._get_htcondor_staging_dir(cluster)
 
         # ensure that staging_dir exists
+        root_uid = os.getuid()
         uid = pwd.getpwnam("jovyan").pw_uid
         os.setuid(uid)
         os.makedirs(htcondor_staging_dir, exist_ok=True)
-        #os.setuid(0)
+        os.setuid(root_uid)
 
         if worker:
             execution_script = os.path.join(htcondor_staging_dir, f"run_worker_{worker.name}.sh")
