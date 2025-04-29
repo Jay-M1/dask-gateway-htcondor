@@ -20,8 +20,7 @@ def htcondor_create_execution_script(execution_script, setup_command, execution_
         #os.chmod(execution_script, 0o755)
         # Change ownership
         #uid = pwd.getpwnam("jovyan").pw_uid
-        #gid = grp.getgrnam("jovyan").gr_gid
-        #os.chown(execution_script, uid, gid)
+
 
 def htcondor_create_jdl(cluster_config, execution_script, log_dir, cpus, mem, env, tls_path):
     # logs
