@@ -30,11 +30,11 @@ def htcondor_create_jdl(cluster_config, execution_script, log_dir, cpus, mem, en
     print(">>>> initialdir =", os.path.dirname(execution_script))
 
     # ensure log dir is present otherwise condor_submit will fail
-    root_uid = os.getuid()
+    root_uid = os.geteuid()
     uid = pwd.getpwnam("jovyan").pw_uid
-    os.setuid(uid)
+    os.seteuid(uid)
     os.makedirs(log_dir, exist_ok=True)
-    os.setuid(root_uid)
+    os.seteuid(root_uid)
 
     env["DASK_DISTRIBUTED__COMM__TLS__SCHEDULER__CERT"] = "dask.crt"
     env["DASK_DISTRIBUTED__COMM__TLS__WORKER__CERT"] = "dask.crt"
@@ -131,11 +131,11 @@ class HTCondorBackend(JobQueueBackend):
         htcondor_staging_dir = self._get_htcondor_staging_dir(cluster)
 
         # ensure that staging_dir exists
-        root_uid = os.getuid()
+        root_uid = os.geteuid()
         uid = pwd.getpwnam("jovyan").pw_uid
-        os.setuid(uid)
+        os.seteuid(uid)
         os.makedirs(htcondor_staging_dir, exist_ok=True)
-        os.setuid(root_uid)
+        os.seteuid(root_uid)
 
         if worker:
             execution_script = os.path.join(htcondor_staging_dir, f"run_worker_{worker.name}.sh")
