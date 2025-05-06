@@ -7,6 +7,12 @@ from enum import Enum
 import math, os, pwd, re, shutil, grp
 
 def htcondor_create_execution_script(execution_script, setup_command, execution_command):
+
+    root_uid = os.geteuid()
+    uid = pwd.getpwnam("jovyan").pw_uid
+    os.seteuid(uid)
+    
+
     # write script to staging_dir
     with open(execution_script, "w") as f:
         f.write("\n".join([
@@ -16,8 +22,10 @@ def htcondor_create_execution_script(execution_script, setup_command, execution_
             setup_command,
             execution_command
         ]))
+
+        os.seteuid(root_uid)
         # make it executable
-        #os.chmod(execution_script, 0o755)
+        os.chmod(execution_script, 0o755)
         # Change ownership
         #uid = pwd.getpwnam("jovyan").pw_uid
 
@@ -46,6 +54,7 @@ def htcondor_create_jdl(cluster_config, execution_script, log_dir, cpus, mem, en
     "executable": execution_script,
     "initialdir": os.path.dirname(execution_script),
     "docker_network_type": "host",
+    "docker_override_entrypoint": "True",
     "should_transfer_files": "YES",
     "transfer_input_files": ",".join(tls_path),
     "when_to_transfer_output": "ON_EXIT",
