@@ -9,7 +9,7 @@ import math, os, pwd, re, shutil, grp
 def htcondor_create_execution_script(execution_script, setup_command, execution_command):
 
     root_uid = os.geteuid()
-    uid = pwd.getpwnam("jovyan").pw_uid
+    uid = pwd.getpwnam("jmustafi").pw_uid
     os.seteuid(uid)
     
 
@@ -38,7 +38,7 @@ def htcondor_create_jdl(cluster_config, execution_script, log_dir, cpus, mem, en
 
     # ensure log dir is present otherwise condor_submit will fail
     root_uid = os.geteuid()
-    uid = pwd.getpwnam("jovyan").pw_uid
+    uid = pwd.getpwnam("jmustafi").pw_uid
     os.seteuid(uid)
     os.makedirs(log_dir, exist_ok=True)
     os.seteuid(root_uid)
@@ -140,8 +140,9 @@ class HTCondorBackend(JobQueueBackend):
 
         # ensure that staging_dir exists
         root_uid = os.geteuid()
-        uid = pwd.getpwnam("jovyan").pw_uid
+        uid = pwd.getpwnam("jmustafi").pw_uid
         os.seteuid(uid)
+        print(f"-------->>>>>>>>>>>>>>>>>>>{os.geteuid()}")
         os.makedirs(htcondor_staging_dir, exist_ok=True)
         os.seteuid(root_uid)
 
