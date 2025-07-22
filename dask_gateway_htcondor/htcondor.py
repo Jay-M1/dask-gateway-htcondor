@@ -1,10 +1,17 @@
-from dask_gateway_server.backends.jobqueue.base import JobQueueBackend, JobQueueClusterConfig
-from dask_gateway_server.traitlets import Type
+import math
+import os
+import pwd
+import re
+import shutil
+from enum import Enum
 
+from dask_gateway_server.backends.jobqueue.base import (
+    JobQueueBackend,
+    JobQueueClusterConfig,
+)
+from dask_gateway_server.traitlets import Type
 from traitlets import Dict, Unicode, default
 
-from enum import Enum
-import math, os, pwd, re, shutil, grp
 
 def htcondor_create_execution_script(execution_script, setup_command, execution_command):
 
@@ -142,7 +149,7 @@ class HTCondorBackend(JobQueueBackend):
         root_uid = os.geteuid()
         uid = pwd.getpwnam("jmustafi").pw_uid
         os.seteuid(uid)
-        print(f"-------->>>>>>>>>>>>>>>>>>>{os.geteuid()}")
+        #print(f"-------->>>>>>>>>>>>>>>>>>>{os.geteuid()}")
         os.makedirs(htcondor_staging_dir, exist_ok=True)
         os.seteuid(root_uid)
 
@@ -184,7 +191,7 @@ class HTCondorBackend(JobQueueBackend):
     def parse_job_id(self, stdout):
         # search the Job ID in a submit Proc line
         submit_id_pattern = re.compile(r"Proc\s(\d+\.\d+)", flags=re.MULTILINE)
-        return submit_id_pattern.search(stdout).group(1)
+        return submit_id_pattern.search(stdout).group(1) #type: ignore[no-any-return]
 
     def parse_job_states(self, stdout):
         """Checks if job is okay"""
