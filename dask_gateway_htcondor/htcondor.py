@@ -133,7 +133,8 @@ class HTCondorBackend(JobQueueBackend):
 
     @default("status_command")
     def _default_status_command(self):
-        return shutil.which("condor_q") or "condor_q"
+        condor_q = shutil.which("condor_q") or "condor_q"
+        return condor_q + " --all-users"
 
     def _get_htcondor_staging_dir(self, cluster):
         htcondor_staging_dir = cluster.config.htcondor_staging_directory.format(
@@ -200,4 +201,5 @@ class HTCondorBackend(JobQueueBackend):
         for match in re.finditer(status_id_pattern, stdout):
             job_id, state= match.groups()
             states[job_id] = HTCondorJobStates(int(state)) in (HTCondorJobStates.IDLE, HTCondorJobStates.RUNNING)
+        print(">>>> parse_job_states =", states) # er erkennt status von job nicht und deswegen bricht er ein idle job ab.
         return states
