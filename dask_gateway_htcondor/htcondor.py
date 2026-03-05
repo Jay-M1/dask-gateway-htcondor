@@ -187,7 +187,7 @@ class HTCondorBackend(JobQueueBackend):
         return [self.cancel_command, job_id], {}
 
     def get_status_cmd_env(self, job_ids):
-        return [self.status_command, "-af:j", "JobStatus"], {}
+        return self.status_command.split() + ["-af:j", "JobStatus"], {}
 
     def parse_job_id(self, stdout):
         # search the Job ID in a submit Proc line
