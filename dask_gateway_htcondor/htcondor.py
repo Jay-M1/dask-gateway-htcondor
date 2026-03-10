@@ -13,10 +13,10 @@ from dask_gateway_server.traitlets import Type
 from traitlets import Dict, Unicode, default
 
 
-def htcondor_create_execution_script(execution_script, setup_command, execution_command):
+def htcondor_create_execution_script(execution_script, setup_command, execution_command, username):
 
     root_uid = os.geteuid()
-    uid = pwd.getpwnam("jmustafi").pw_uid
+    uid = pwd.getpwnam(username).pw_uid
     os.seteuid(uid)
     
 
@@ -37,7 +37,7 @@ def htcondor_create_execution_script(execution_script, setup_command, execution_
         #uid = pwd.getpwnam("jovyan").pw_uid
 
 
-def htcondor_create_jdl(cluster_config, execution_script, log_dir, cpus, mem, env, tls_path):
+def htcondor_create_jdl(cluster_config, execution_script, log_dir, cpus, mem, env, tls_path, username):
     # logs
     print(">>>> execution_script =", execution_script)
     print(">>>> abs execution_script =", os.path.abspath(execution_script))
@@ -45,7 +45,7 @@ def htcondor_create_jdl(cluster_config, execution_script, log_dir, cpus, mem, en
 
     # ensure log dir is present otherwise condor_submit will fail
     root_uid = os.geteuid()
-    uid = pwd.getpwnam("jmustafi").pw_uid
+    uid = pwd.getpwnam(username).pw_uid
     os.seteuid(uid)
     os.makedirs(log_dir, exist_ok=True)
     os.seteuid(root_uid)
@@ -99,7 +99,7 @@ class HTCondorClusterConfig(JobQueueClusterConfig):
     docker_image = Unicode("coffeateam/coffea-dask-cc7-gateway", help="The docker image to run jobs in.", config=True)
     extra_jdl = Dict(help="Additional content of the job description file.", config=True)
     htcondor_staging_directory = Unicode(
-    "{home}/.dask-gateway-htcondor/",
+    "/home/jmustafi/dask-gateway-staging/{username}/htcondor/",
     help="""
     The htcondor staging directory for storing files before the job starts.
     A subdirectory will be created for each new cluster which will store
@@ -148,9 +148,8 @@ class HTCondorBackend(JobQueueBackend):
 
         # ensure that staging_dir exists
         root_uid = os.geteuid()
-        uid = pwd.getpwnam("jmustafi").pw_uid
+        uid = pwd.getpwnam(cluster.username).pw_uid
         os.seteuid(uid)
-        #print(f"-------->>>>>>>>>>>>>>>>>>>{os.geteuid()}")
         os.makedirs(htcondor_staging_dir, exist_ok=True)
         os.seteuid(root_uid)
 
@@ -158,20 +157,23 @@ class HTCondorBackend(JobQueueBackend):
             execution_script = os.path.join(htcondor_staging_dir, f"run_worker_{worker.name}.sh")
             htcondor_create_execution_script(execution_script=execution_script,
                 setup_command=cluster.config.worker_setup,
-                execution_command=" ".join(self.get_worker_command(cluster, worker.name)))
+                execution_command=" ".join(self.get_worker_command(cluster, worker.name)),
+                username=cluster.username)
             env = self.get_worker_env(cluster)
-            jdl = htcondor_create_jdl(cluster_config=cluster.config, 
+            jdl = htcondor_create_jdl(cluster_config=cluster.config,
                 execution_script=execution_script,
                 log_dir=os.path.join(htcondor_staging_dir, f"logs_worker_{worker.name}"),
-                cpus=cluster.config.worker_cores, 
+                cpus=cluster.config.worker_cores,
                 mem=htcondor_memory_format(cluster.config.worker_memory),
                 env=env,
-                tls_path=self.get_tls_paths(cluster))
+                tls_path=self.get_tls_paths(cluster),
+                username=cluster.username)
         else:
             execution_script = os.path.join(htcondor_staging_dir, f"run_scheduler_{cluster.name}.sh")
             htcondor_create_execution_script(execution_script=execution_script,
                 setup_command=cluster.config.scheduler_setup,
-                execution_command=" ".join(self.get_scheduler_command(cluster)))
+                execution_command=" ".join(self.get_scheduler_command(cluster)),
+                username=cluster.username)
             env = self.get_scheduler_env(cluster)
             jdl = htcondor_create_jdl(cluster_config=cluster.config,
                 execution_script=execution_script,
@@ -179,7 +181,8 @@ class HTCondorBackend(JobQueueBackend):
                 cpus=cluster.config.scheduler_cores,
                 mem=htcondor_memory_format(cluster.config.scheduler_memory),
                 env=env,
-                tls_path=self.get_tls_paths(cluster))
+                tls_path=self.get_tls_paths(cluster),
+                username=cluster.username)
 
         return cmd, env, jdl
 
