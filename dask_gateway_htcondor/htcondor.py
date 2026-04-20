@@ -99,7 +99,7 @@ class HTCondorClusterConfig(JobQueueClusterConfig):
     docker_image = Unicode("coffeateam/coffea-dask-cc7-gateway", help="The docker image to run jobs in.", config=True)
     extra_jdl = Dict(help="Additional content of the job description file.", config=True)
     htcondor_staging_directory = Unicode(
-    "/home/jmustafi/dask-gateway-staging/{username}/htcondor/",
+    "/var/lib/dask-gateway/{username}/htcondor/",
     help="""
     The htcondor staging directory for storing files before the job starts.
     A subdirectory will be created for each new cluster which will store
