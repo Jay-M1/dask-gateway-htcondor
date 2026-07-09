@@ -10,7 +10,7 @@ from dask_gateway_server.backends.jobqueue.base import (
     JobQueueClusterConfig,
 )
 from dask_gateway_server.traitlets import Type
-from traitlets import Dict, Unicode, default
+from traitlets import Dict, Integer, Unicode, default
 
 
 def htcondor_create_execution_script(execution_script, setup_command, execution_command, username):
@@ -37,7 +37,7 @@ def htcondor_create_execution_script(execution_script, setup_command, execution_
         #uid = pwd.getpwnam("jovyan").pw_uid
 
 
-def htcondor_create_jdl(cluster_config, execution_script, log_dir, cpus, mem, env, tls_path, username):
+def htcondor_create_jdl(cluster_config, execution_script, log_dir, cpus, mem, env, tls_path, username, gpus=0):
     # logs
     print(">>>> execution_script =", execution_script)
     print(">>>> abs execution_script =", os.path.abspath(execution_script))
@@ -72,7 +72,21 @@ def htcondor_create_jdl(cluster_config, execution_script, log_dir, cpus, mem, en
     "request_memory": f"{mem}",
     "environment": ";".join(f"{key}={value}" for key, value in env.items())
     }
-    jdl_dict.update(cluster_config.extra_jdl)
+    if gpus and int(gpus) > 0:
+        # GPU nodes may provide no Docker, only Apptainer/Singularity
+        # (e.g. the NEMO drones): submit GPU workers in the container
+        # universe running the same image via a docker:// URL.
+        jdl_dict["universe"] = "container"
+        jdl_dict["container_image"] = f"docker://{cluster_config.docker_image}"
+        for docker_key in ("docker_image", "docker_network_type", "docker_override_entrypoint"):
+            jdl_dict.pop(docker_key, None)
+        jdl_dict["request_gpus"] = f"{gpus}"
+        jdl_dict.update(cluster_config.extra_jdl)
+        # applied last so it can override extra_jdl entries (e.g. a
+        # requirements expression that only fits the non-GPU nodes)
+        jdl_dict.update(cluster_config.gpu_extra_jdl)
+    else:
+        jdl_dict.update(cluster_config.extra_jdl)
 
     jdl = "\n".join(f"{key} = {value}" for key, value in jdl_dict.items()) + "\n"
     jdl += "queue 1\n"
@@ -97,7 +111,17 @@ class HTCondorClusterConfig(JobQueueClusterConfig):
     """Dask cluster configuration options when running on HTCondor"""
     universe = Unicode("docker", help="The universe to submit jobs to. Defaults to docker", config=True)
     docker_image = Unicode("coffeateam/coffea-dask-cc7-gateway", help="The docker image to run jobs in.", config=True)
+    worker_gpus = Integer(0, help="Number of GPUs to request per worker.", config=True)
     extra_jdl = Dict(help="Additional content of the job description file.", config=True)
+    gpu_extra_jdl = Dict(
+        help="""
+        Additional content of the job description file for workers that
+        request GPUs. Applied after (and overriding) extra_jdl, so it can
+        replace entries such as a requirements expression that only
+        matches the non-GPU nodes.
+        """,
+        config=True,
+    )
     htcondor_staging_directory = Unicode(
     "/var/lib/dask-gateway/{username}/htcondor/",
     help="""
@@ -165,6 +189,7 @@ class HTCondorBackend(JobQueueBackend):
                 log_dir=os.path.join(htcondor_staging_dir, f"logs_worker_{worker.name}"),
                 cpus=cluster.config.worker_cores,
                 mem=htcondor_memory_format(cluster.config.worker_memory),
+                gpus=cluster.config.worker_gpus,
                 env=env,
                 tls_path=self.get_tls_paths(cluster),
                 username=cluster.username)
